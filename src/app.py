@@ -1,5 +1,5 @@
 from collections import UserDict
-from flask import Flask, request, jsonify, Response
+from flask import Flask, json, request, jsonify, Response
 from flask_pymongo import PyMongo
 # importamos paquetes para trabajar con los passwords
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -41,9 +41,7 @@ def create_user():
         return not_found()
 
     return {'message': 'received'}
-# vamos a listar los datos
-# mediante la siguiente función devolvemos
-# los usuarios
+# listar todos los usuarios (GET)
 
 
 @app.route('/users', methods=['GET'])
@@ -53,7 +51,7 @@ def get_users():
     return Response(response, mimetype='application/json')
 # En el caso de datos erroneos
 
-# Para obtener los datos de los usuario con ID
+# retornar usuario(GET)
 
 
 @app.route('/users/<id>', methods=['GET'])
@@ -62,9 +60,36 @@ def get_user(id):
     response = json_util.dumps(user)
     # print(id)
     return Response(response, mimetype="application/json")
+# eliminamos usuario(DELETE)
 
 
-@ app.errorhandler(404)
+@app.route('/users/<id>', methods=['DELETE'])
+def delete_id(id):
+    mongo.db.users.delete_one({'_id': ObjectId(id)})
+    response = jsonify({'message': 'User'+id+'was deleleted successfully'})
+    return response
+
+# actualizamos usuario (PUT)
+
+
+@app.route('/users/<id>', methods=['PUT'])
+def update_user(id):
+    username = request.json['username']
+    email = request.json['email']
+    password = request.json['password']
+
+    if username and email and password:
+        hashed_password = generate_password_hash(password)
+        mongo.db.users.update_one({'_id': ObjectId(id)}, {'$set': {
+            'username': username,
+            'password': hashed_password,
+            'email': email
+        }})
+        response = jsonify({'message': 'User'+id+'was updated succesfully'})
+        return response
+
+
+@app.errorhandler(404)
 def not_found(error=None):
     response = jsonify({
         'message': 'Resource Not Found: ' + request.url,
